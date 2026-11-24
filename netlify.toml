@@ -1,0 +1,22 @@
+# Netlify builds this repo on every push to main.
+#
+# There is no build command: the GitHub Action runs the scraper and commits
+# dist/, so Netlify only has to serve it. That keeps Python out of the build
+# image and means a broken scrape can never take the site down - the Action
+# fails, nothing is pushed, and the last good deploy stays up.
+
+[build]
+  publish = "dist"
+  functions = "netlify/functions"
+
+# Visit counting, served from this domain. Same-origin, so ad blockers do not
+# suppress it the way they do a third-party analytics script.
+[[redirects]]
+  from = "/api/hit"
+  to = "/.netlify/functions/hit"
+  status = 200
+
+[[redirects]]
+  from = "/stats"
+  to = "/.netlify/functions/stats"
+  status = 200

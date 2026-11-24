@@ -1,9 +1,13 @@
 name: refresh hours
 
 # RecSports edits its hours page whenever a holiday or break comes up, and the
-# dashboard carries a baked-in copy (their page sends no CORS header, so the
-# browser cannot read it directly). This re-scrapes it every morning, commits
-# any change, and redeploys so the "as posted" stamp on the page is current.
+# dashboard carries a baked-in copy of it (their page sends no CORS header, so
+# the browser cannot read it at runtime). This re-scrapes every morning and
+# commits the result; Netlify is connected to this repo, so the push is what
+# deploys it. No Netlify credentials live here.
+#
+# If the scrape comes back wrong the job fails, nothing is pushed, and the last
+# good deploy stays up. GitHub emails you when a scheduled job fails.
 on:
   schedule:
     - cron: "30 11 * * *"      # 11:30 UTC = 6:30 ET in winter, 7:30 ET in summer
@@ -17,7 +21,7 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     permissions:
-      contents: write           # to commit the refreshed hours back
+      contents: write           # to commit the refreshed hours
     steps:
       - uses: actions/checkout@v4
 
@@ -28,43 +32,21 @@ jobs:
       - name: Scrape recsports.ufl.edu
         run: python3 hours.py
 
-      - name: Check the result is sane before shipping it
-        # A page that still has the headings but no times under them would
-        # otherwise sail through and wipe the schedule.
-        run: |
-          python3 - <<'PY'
-          import io, json, re, sys
-          s = io.open("index.html", encoding="utf-8").read()
-          m = re.search(r"/\* HOURS-DATA-START \*/\nconst HOURS = (.*?);\n/\* HOURS-DATA-END \*/", s, re.S)
-          if not m: sys.exit("no HOURS block")
-          d = json.loads(m.group(1))
-          for k in ("SWRC", "SRFC", "UVS", "TENNIS"):
-              f = d["fac"].get(k)
-              if not f: sys.exit("missing facility " + k)
-              if not any(f["weekly"]): sys.exit(k + " has no weekly hours")
-          for k in ("SWRC", "SRFC"):
-              if not d["fac"][k]["adj"]: sys.exit(k + " lost its adjusted-hours block")
-          print("sane: SWRC %d / SRFC %d adjusted dates"
-                % (len(d["fac"]["SWRC"]["adj"]), len(d["fac"]["SRFC"]["adj"])))
-          PY
+      - name: Refuse a bad scrape
+        run: python3 check-hours.py
 
       - name: Build
         run: python3 build.py
 
-      - name: Commit any change
+      - name: Commit and push if the hours moved
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- index.html; then
-            echo "hours unchanged"
+          if git diff --quiet -- index.html dist/; then
+            echo "hours unchanged - nothing to deploy"
           else
-            git add index.html
+            git add index.html dist/
             git commit -m "hours: refresh from recsports.ufl.edu"
             git push
+            echo "pushed - Netlify will deploy"
           fi
-
-      - name: Deploy to Netlify
-        run: npx --yes netlify-cli@24 deploy --dir=dist --prod -m "hours refresh"
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: 9ff01542-e5a8-4940-969f-c636c8a329cc

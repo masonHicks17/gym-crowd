@@ -433,8 +433,9 @@ footer{padding:28px 0;font-family:"IBM Plex Mono",monospace;
   <a href="https://recsports.ufl.edu/cameras-counts/" target="_blank" rel="noopener noreferrer">cameras &amp; counts</a>
   page; hours come from their
   <a href="https://recsports.ufl.edu/about/hours/" target="_blank" rel="noopener noreferrer">hours</a>
-  page and are copied in by hand, so check there before a holiday. Built by a student
-  · no accounts, no cookies, nothing about you is stored.
+  page and are copied in by hand, so check there before a holiday. Built by a student. No accounts and no cookies; visits are counted
+  on this site’s own server by a hash of your address and browser that changes
+  every day, and your address itself is never stored.
 </p>
 </div>
 
@@ -1224,6 +1225,7 @@ function installInit(){
    filled in, and never on a dev server or in the artifact (whose CSP blocks
    outside scripts anyway, so the request would only throw). */
 function analyticsInit(){
+  beacon("");                  // the visit itself
   const h = location.hostname;
   if(location.protocol === "file:" || !h ||
      h === "localhost" || h === "127.0.0.1" || h.endsWith(".local")) return;
@@ -1248,9 +1250,29 @@ function analyticsInit(){
     window.gtag("config", ANALYTICS.ga4);
   }
 }
+/* Our own counter, served from this domain by netlify/functions/hit.mjs.
+   Same-origin, so ad blockers do not suppress it, and nothing that identifies
+   a person leaves the browser - the function hashes address and browser with
+   the date and keeps only that. keepalive so the last beacon still goes out
+   if the page is closing. */
+function beacon(ev){
+  if(location.protocol === "file:") return;
+  const h = location.hostname;
+  if(!h || h === "localhost" || h === "127.0.0.1") return;
+  try{
+    fetch("/api/hit", {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body: JSON.stringify(ev ? {e:ev} : {}),
+      keepalive: true
+    }).catch(()=>{});          // a counter must never bother the visitor
+  }catch(e){}
+}
+
 /* Counts an interaction, so you can see which rooms people actually check and
    whether the cameras get used. Name only - no identifiers, nothing typed. */
 function track(name){
+  beacon(name);
   try{
     if(window.goatcounter && window.goatcounter.count)
       window.goatcounter.count({path:name, title:name, event:true});

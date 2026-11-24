@@ -1,0 +1,9 @@
+{
+  "name": "gym-crowd",
+  "private": true,
+  "type": "module",
+  "description": "UF Rec Crowd - visit counting functions. The dashboard itself is plain static HTML.",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
