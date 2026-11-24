@@ -7,7 +7,7 @@ import { getStore } from "@netlify/blobs";
  * of days so the listing stays small as the site ages.
  */
 
-const DAYS = 30;
+const DAYS = 14;   // a fortnight of rows; the all-time total covers the rest
 
 const iso = d => d.toISOString().slice(0, 10);
 const esc = s => String(s).replace(/[&<>"]/g,

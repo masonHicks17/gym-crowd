@@ -59,7 +59,9 @@ export default async (req, context) => {
   const ref = req.headers.get("referer") || "";
   try {
     const host = new URL(ref).hostname;
-    if (host && !/(^|\.)gym-crowd\.netlify\.app$/.test(host) && host !== "localhost")
+    // Deploy previews are <id>--gym-crowd.netlify.app, so the separator before
+    // the site name is a dash as often as a dot. Both are still us.
+    if (host && !/(^|[.-])gym-crowd\.netlify\.app$/.test(host) && host !== "localhost")
       writes.push(store.set(`r/${day}/${clean(host)}/${rand}`, ""));
   } catch {
     /* no referrer, or not a URL */
@@ -70,10 +72,10 @@ export default async (req, context) => {
   } catch (err) {
     // Never let counting break the page: the beacon ignores the reply anyway.
     console.error("hit: write failed", err);
-    return new Response("", { status: 204 });
+    return new Response(null, { status: 204 });
   }
 
-  return new Response("", { status: 204 });
+  return new Response(null, { status: 204 });
 };
 
 export const config = { path: "/api/hit" };
