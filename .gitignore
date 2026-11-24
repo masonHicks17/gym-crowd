@@ -1,0 +1,5 @@
+dist/
+logs/
+.netlify/
+.index.html.prev
+.DS_Store

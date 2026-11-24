@@ -1,0 +1,1426 @@
+<!doctype html><html><head><meta charset=utf8>
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=9ff01542-e5a8-4940-969f-c636c8a329cc
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. --><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SW Rec Crowd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --chalk:#E8E6E0;
+  --chalk-2:#DFDCD4;
+  --iron:#1F1D1B;
+  --steel:#6E6A64;
+  --rack:#CFCBC3;
+  /* IWF competition bumper plate colours, used as the crowding ramp */
+  --p10:#2F7D3A;   /* green  - quiet   */
+  --p15:#E8B517;   /* yellow - filling */
+  --p25:#C8322B;   /* red    - packed  */
+  --line:#C6C2B9;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--chalk);
+  color:var(--iron);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  padding:0 20px 64px;
+}
+.wrap{max-width:860px;margin:0 auto}
+
+/* ---------- header ---------- */
+header{
+  padding:20px 0 16px;border-bottom:2px solid var(--iron);
+  display:flex;align-items:baseline;justify-content:space-between;
+  flex-wrap:wrap;gap:6px 20px;
+}
+h1{
+  font-family:Anton,Impact,sans-serif;
+  font-weight:400;
+  font-size:clamp(24px,5.2vw,38px);
+  line-height:1;
+  letter-spacing:.01em;
+  text-transform:uppercase;
+  margin:0;white-space:nowrap;
+}
+.sub{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--steel);
+}
+
+/* ---------- controls ---------- */
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 4px}
+.seg{display:flex;border:1.5px solid var(--iron)}
+.seg button{
+  appearance:none;background:transparent;border:0;
+  border-right:1.5px solid var(--iron);
+  font-family:"IBM Plex Mono",monospace;
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:9px 13px;cursor:pointer;color:var(--iron);
+}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--iron);color:var(--chalk)}
+.seg button:focus-visible{outline:3px solid var(--p15);outline-offset:2px}
+
+/* ---------- sections ---------- */
+section{padding:34px 0;border-bottom:1px solid var(--line)}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--steel);margin:0 0 18px;
+}
+
+/* ---------- now readout ---------- */
+.now{display:flex;align-items:flex-end;gap:26px;flex-wrap:wrap}
+.count{
+  font-family:"IBM Plex Mono",monospace;font-weight:600;
+  font-size:clamp(60px,16vw,104px);line-height:.82;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+}
+.of{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--steel);margin-top:10px}
+.nowmeta{flex:1;min-width:210px;padding-bottom:6px}
+.bar{height:14px;background:var(--rack);position:relative;overflow:hidden}
+.bar i{display:block;height:100%;width:0;transition:width .5s ease}
+.pctline{
+  display:flex;justify-content:space-between;
+  font-family:"IBM Plex Mono",monospace;font-size:12px;
+  margin-top:8px;color:var(--steel);
+}
+.pctline b{color:var(--iron);font-weight:600}
+
+/* ---------- best times ---------- */
+section.compact{padding:16px 0}
+section.compact .eyebrow{margin-bottom:8px}
+.slotline{
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;
+  color:var(--iron);letter-spacing:.01em;
+}
+.slotline b{font-weight:600;font-variant-numeric:tabular-nums}
+.slotline .sep{color:var(--steel);margin:0 10px}
+
+/* ---------- heatmap ---------- */
+.hmscroll{overflow-x:auto;margin:0 -20px;padding:0 20px}
+table.hm{border-collapse:separate;border-spacing:3px;min-width:640px}
+table.hm th{
+  font-family:"IBM Plex Mono",monospace;font-weight:400;
+  font-size:10px;color:var(--steel);letter-spacing:.06em;
+  padding:0;text-align:center;
+}
+table.hm th.day{text-align:right;padding-right:8px;width:34px;
+  font-size:11px;color:var(--iron);letter-spacing:.1em}
+table.hm td{width:30px;height:26px;padding:0;background:var(--rack)}
+table.hm td.thin{
+  background:repeating-linear-gradient(45deg,var(--rack),var(--rack) 3px,var(--chalk-2) 3px,var(--chalk-2) 6px);
+}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;
+  font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel)}
+.legend span{display:flex;align-items:center;gap:7px}
+.legend .dim{opacity:.7}
+.daypick{margin:0 0 16px;width:max-content;max-width:100%}
+.daypick button{padding:8px 11px}
+.sw{width:15px;height:15px;display:inline-block}
+
+/* ---------- chart ---------- */
+svg{display:block;width:100%;height:auto}
+.hit{fill:transparent;cursor:pointer}
+.hit:hover{fill:var(--iron);fill-opacity:.05}
+
+.readout{
+  margin-top:14px;padding:11px 14px;
+  border:1.5px solid var(--iron);background:var(--chalk-2);
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.5;
+  min-height:44px;
+}
+.readout b{font-weight:600}
+.readout .dim{color:var(--steel)}
+table.hm td{cursor:pointer}
+table.hm td.sel{outline:2.5px solid var(--iron);outline-offset:1px}
+.ax{font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-weight:600;fill:var(--steel)}
+
+/* ---------- notes ---------- */
+.note{
+  font-size:13px;line-height:1.55;color:var(--steel);
+  border-left:2px solid var(--p15);padding-left:14px;margin-top:16px;
+}
+.note b{color:var(--iron)}
+
+/* ---------- hour-cell history ---------- */
+.histlist{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px}
+.histrow{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--iron);
+  font-variant-numeric:tabular-nums;
+}
+.histrow .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.histcap{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--steel);
+  margin-top:8px;
+}
+.eyebrow a{color:var(--steel);text-decoration:underline;text-underline-offset:3px}
+.eyebrow a:hover,.eyebrow a:focus-visible{color:var(--iron)}
+/* ---------- tennis: court grid ---------- */
+/* Two banks of five courts drawn top-down to USTA proportions (36 x 78 ft),
+   each court surface filled by how many people are on it. */
+:root{--court:#3E6E8E;--court-line:#F4F2EC}
+.courts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 8px;max-width:640px}
+.court{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.court svg{width:100%;max-width:84px}
+.court .cn{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel);letter-spacing:.06em}
+.court .cs{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.03em;white-space:nowrap;text-transform:uppercase}
+.courtsum{display:flex;flex-wrap:wrap;gap:6px 22px;margin:0 0 16px;
+  font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--steel)}
+.courtsum b{color:var(--iron);font-weight:600;font-size:22px;font-variant-numeric:tabular-nums}
+/* court-by-hour table */
+table.ch{border-collapse:separate;border-spacing:3px;min-width:560px}
+table.ch th{font-family:"IBM Plex Mono",monospace;font-weight:400;font-size:10px;color:var(--steel);padding:0;text-align:center}
+table.ch th.row{text-align:right;padding-right:8px;width:52px;font-size:11px;color:var(--iron)}
+table.ch td{width:30px;height:22px;padding:0;background:var(--rack);cursor:pointer}
+table.ch td.sel{outline:2.5px solid var(--iron);outline-offset:1px}
+table.ch.tall{min-width:0;width:100%;max-width:440px;table-layout:fixed}
+table.ch.tall th.row{width:38px;padding-right:6px;font-size:10.5px;color:var(--steel)}
+table.ch.tall th{font-size:11px;color:var(--iron)}
+table.ch.tall td{width:auto;height:20px}
+.chaxis{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--steel);margin:0 0 6px}
+.chaxis:empty{display:none}
+/* phones: drop the words the player dots already say */
+@media (max-width:430px){
+  .court .w{display:none}
+  .courts{gap:10px 6px}
+  .courtsum{gap:4px 16px}
+}
+footer{padding:28px 0;font-family:"IBM Plex Mono",monospace;
+  font-size:11px;color:var(--steel);letter-spacing:.06em}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>SW Rec Crowd</h1>
+  <div class="sub" id="stamp">Loading&hellip;</div>
+</header>
+
+<div class="controls">
+  <div class="seg" id="locSeg"></div>
+  <div class="seg" id="rangeSeg"></div>
+</div>
+
+<section>
+  <p class="eyebrow">Right now <a href="https://recsports.ufl.edu/cameras-counts/" target="_blank" rel="noopener noreferrer">· live cameras ↗</a></p>
+  <div class="now">
+    <div>
+      <div class="count" id="nowCount">&mdash;</div>
+      <div class="of" id="nowOf"></div>
+    </div>
+    <div class="nowmeta">
+      <div class="bar"><i id="nowBar"></i></div>
+      <div class="pctline"><span id="nowPct"></span><span id="nowAgo"></span></div>
+    </div>
+  </div>
+</section>
+
+<section id="courtsNow" hidden>
+  <p class="eyebrow">Courts <span id="courtsWhen"></span></p>
+  <div class="courtsum" id="courtSum"></div>
+  <div class="courts" id="courtGrid"></div>
+  <div class="legend" id="courtLegend"></div>
+</section>
+
+<section class="compact">
+  <p class="eyebrow">Quietest hours</p>
+  <div class="slotline" id="slots"></div>
+</section>
+
+<section>
+  <p class="eyebrow">By hour and day</p>
+  <div class="hmscroll"><table class="hm" id="hm"></table></div>
+  <div class="readout" id="hmRead"><span class="dim">Hover any block for that hour's numbers, or tap to lock it and see its history.</span></div>
+  <div class="legend" id="legend"></div>
+</section>
+
+<section id="courtsHour" hidden>
+  <p class="eyebrow">Each court by hour · how often it's taken</p>
+  <p class="chaxis" id="chAxis"></p>
+  <div class="hmscroll"><table class="ch" id="ch"></table></div>
+  <div class="readout" id="chHourRead"><span class="dim">Hover or tap a block to see how often that court was in use at that hour.</span></div>
+  <div class="legend" id="chLegend"></div>
+</section>
+
+<section>
+  <p class="eyebrow"><span id="dayWhich">Today</span> against a typical <span id="dayKind">weekday</span></p>
+  <div class="seg daypick" id="daySeg"></div>
+  <div id="chart"></div>
+  <div class="readout" id="chRead"><span class="dim">Tap or hover the chart for that hour's numbers.</span></div>
+  <div class="note" id="chartNote" hidden></div>
+</section>
+
+<footer id="foot"></footer>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   CONFIG — paste the published CSV URL here once you publish
+   the Log tab (File → Share → Publish to web → Log → CSV).
+   Leave blank to run on the built-in snapshot.
+   ═══════════════════════════════════════════════════════════ */
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT2fBqGyWQtp53Cb0TO_RHQuuqpaBVo0o5t8QtJzcr0vZ9XY6oFsAwr0OHJw1zrSV20uMy9ukSu2aMX/pub?output=csv";
+
+/* Tennis lives on its own tab (one column per court). Publish that tab as CSV
+   too and paste its link here. Blank = use the built-in tennis snapshot. */
+const TENNIS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT2fBqGyWQtp53Cb0TO_RHQuuqpaBVo0o5t8QtJzcr0vZ9XY6oFsAwr0OHJw1zrSV20uMy9ukSu2aMX/pub?gid=1732252737&single=true&output=csv";
+
+const REFRESH_MS = 60000;
+
+/* zeroMeansClosed: the board reports 0 both for "empty" and for "closed", and
+   IsClosed is not trustworthy — it read false at 10:11pm on a night SWRC shut
+   at 10pm, and false 4 min before SRFC opened. Checked against RecSports'
+   posted August hours, all 7 weight-room zeros fall outside operating hours
+   and none is a genuinely empty open room. The outdoor volleyball court is
+   the opposite case: 0 is its normal state, so its zeros are kept. */
+/* cap      = the working scale every percentage and colour is drawn against.
+   posted   = what RecSports publishes, quoted only in the over-limit note.
+   bands    = raw headcounts for quiet | normal | busy | packed, per room.
+
+   Mason's SWRC calibration (quiet <75, normal 75-150, busy 150-200, packed
+   200+) sits at the 14th / 64th / 89th percentile of SWRC's own fall-term
+   readings. The other two rooms get the counts at those same percentiles of
+   their own data, so "busy" means the same thing in each — the old code
+   reused SWRC's numbers everywhere, which left SRFC (all-time high 95) and
+   volleyball (high 64) permanently green.
+
+   SRFC's posted 50 is too low to scale against: 32 of 309 fall-term readings
+   are above it and the high is 95 (190%). 75 keeps the over-limit story true
+   while only 2% of readings exceed it. Volleyball's posted 100 is never
+   approached — 60 is the working ceiling. */
+const LOCS = {
+  "SWRC Weight Room":   {code:"S", short:"SWRC",       cap:300, posted:300, bands:[75,150,200], zeroMeansClosed:true},
+  "SRFC Weight Room":   {code:"R", short:"SRFC",       cap:75,  posted:50,  bands:[25,40,50],   zeroMeansClosed:true},
+  "UVS Sand Volleyball":{code:"V", short:"Volleyball", cap:60,  posted:100, bands:[5,18,35],    zeroMeansClosed:false},
+  /* 10 courts x 4 players = 40, which is also what RecSports posts. Bands are
+     a first guess (a quarter, half, three quarters of the courts' doubles load)
+     until there are a few weeks of readings to calibrate against. */
+  "SWRC Tennis Courts": {code:"T", short:"Tennis",     cap:40,  posted:40,  bands:[10,20,30],   zeroMeansClosed:false}
+};
+/* Oct 2026: UF renamed SRFC's room to "SRFC Upper Weight Room" (posted 100).
+   pollGym still logs it as "SRFC Weight Room"; this catches the raw name too. */
+const ALIASES = {"SRFC Upper Weight Room":"SRFC Weight Room"};
+const COURTS = 10;
+const isTennis = n => n === "SWRC Tennis Courts";
+const BY_CODE = {}; for (const [n,m] of Object.entries(LOCS)) BY_CODE[m.code] = {...m, name:n};
+
+/* Fall term began Aug 17 2026. Counts roughly tripled overnight, so
+   averaging across the boundary produces a heatmap of nothing. */
+const TERM_START = "2026-08-17";
+
+const SNAPSHOT = `2026-07-31T17:58:44.193|R|13
+2026-08-01T10:27:25.82|S|42
+2026-08-01T10:27:39.53|V|0
+2026-08-01T12:29:40.293|S|25
+2026-08-01T12:29:55.147|V|0
+2026-08-01T12:31:42.337|R|2
+2026-08-01T13:25:53.97|R|1
+2026-08-01T13:28:00.993|S|26
+2026-08-01T13:28:15.757|V|0
+2026-08-01T14:26:46.97|R|7
+2026-08-01T14:28:20.15|S|33
+2026-08-01T14:28:35.15|V|0
+2026-08-01T15:25:28.303|R|6
+2026-08-01T15:31:38.197|S|51
+2026-08-01T15:31:52.24|V|0
+2026-08-01T16:28:31.46|S|56
+2026-08-01T16:28:45.333|V|0
+2026-08-01T16:32:14.17|R|6
+2026-08-01T17:21:29.733|R|7
+2026-08-01T17:29:32.133|S|60
+2026-08-01T17:31:59.117|V|0
+2026-08-01T18:28:14.943|S|68
+2026-08-01T18:34:27.17|R|16
+2026-08-01T19:32:37.537|S|69
+2026-08-01T19:32:57.88|V|0
+2026-08-01T20:23:50.153|R|8
+2026-08-01T21:16:10.517|S|0
+2026-08-02T09:28:27.7|S|15
+2026-08-02T10:30:34.05|S|25
+2026-08-02T10:30:48.567|V|0
+2026-08-02T11:31:54.46|S|25
+2026-08-02T11:32:09.15|V|0
+2026-08-02T12:27:39.747|S|24
+2026-08-02T12:28:23|R|4
+2026-08-02T13:27:35.06|R|4
+2026-08-02T13:31:38.66|S|32
+2026-08-02T14:26:13.75|R|3
+2026-08-02T14:28:29.17|S|39
+2026-08-02T15:27:51.253|R|7
+2026-08-02T15:29:12.343|S|49
+2026-08-02T16:29:58.98|R|4
+2026-08-02T16:31:39.807|S|53
+2026-08-02T17:14:12.79|R|10
+2026-08-02T17:31:35.087|S|70
+2026-08-02T18:27:18.08|S|85
+2026-08-02T18:29:46.81|R|11
+2026-08-02T18:35:59.39|R|10
+2026-08-02T19:32:12.093|S|63
+2026-08-02T20:31:17.953|R|4
+2026-08-02T20:31:35.94|S|47
+2026-08-03T06:27:41.473|S|25
+2026-08-03T07:27:20.017|S|21
+2026-08-03T08:30:12.877|S|22
+2026-08-03T09:33:14.567|S|23
+2026-08-03T11:29:07.813|S|31
+2026-08-03T12:28:36|S|41
+2026-08-03T12:36:09.43|R|8
+2026-08-03T13:26:22.373|S|30
+2026-08-03T14:33:46.78|S|47
+2026-08-03T15:31:57.97|R|18
+2026-08-03T15:33:13.12|V|0
+2026-08-03T16:28:12.833|S|81
+2026-08-03T17:26:20.357|S|104
+2026-08-03T17:32:07|R|34
+2026-08-03T18:32:00.897|R|20
+2026-08-03T19:28:05.877|V|20
+2026-08-03T19:31:59.157|S|131
+2026-08-03T20:30:22.447|R|12
+2026-08-03T20:37:26.71|V|14
+2026-08-03T20:58:04.673|S|91
+2026-08-03T21:37:15.84|V|17
+2026-08-04T06:35:28.42|V|0
+2026-08-04T07:27:19.453|S|21
+2026-08-04T09:23:07.933|S|21
+2026-08-04T10:25:54.997|S|24
+2026-08-04T11:26:49.86|S|30
+2026-08-04T12:30:25.853|S|38
+2026-08-04T12:32:42.167|R|5
+2026-08-04T13:27:42|S|30
+2026-08-04T13:32:15.837|R|5
+2026-08-04T14:22:08.497|R|8
+2026-08-04T14:23:02.877|S|39
+2026-08-04T15:06:23.8|V|0
+2026-08-04T15:33:37.857|R|12
+2026-08-04T16:26:46.53|V|0
+2026-08-04T16:31:08.587|S|69
+2026-08-04T16:35:31.023|R|8
+2026-08-04T17:29:04.257|S|83
+2026-08-04T17:31:50.477|V|8
+2026-08-04T17:36:25.627|R|10
+2026-08-04T19:05:41.613|S|79
+2026-08-04T19:45:33.68|R|13
+2026-08-04T20:00:44.157|S|56
+2026-08-05T07:28:10.323|V|0
+2026-08-05T10:28:03.507|S|24
+2026-08-05T11:28:30.443|S|24
+2026-08-05T12:27:47.893|S|25
+2026-08-05T13:31:06.263|S|46
+2026-08-05T14:52:05.05|S|45
+2026-08-05T15:23:06.53|V|0
+2026-08-05T16:27:40.497|S|55
+2026-08-05T16:27:59.573|V|0
+2026-08-05T17:25:07.047|R|12
+2026-08-05T17:28:56.077|S|86
+2026-08-05T17:29:11.607|V|0
+2026-08-05T17:37:42.77|V|2
+2026-08-05T18:27:15.917|S|70
+2026-08-05T18:36:30.513|R|18
+2026-08-05T18:44:11.53|V|6
+2026-08-05T19:29:33.187|S|67
+2026-08-05T19:55:41.01|R|8
+2026-08-05T21:29:49.743|S|45
+2026-08-05T21:30:03.46|V|16
+2026-08-06T05:36:42.227|S|4
+2026-08-06T05:36:55.867|V|0
+2026-08-06T07:25:45.627|S|18
+2026-08-06T08:27:49.997|S|19
+2026-08-06T10:30:49.653|S|30
+2026-08-06T11:32:16.083|S|20
+2026-08-06T12:29:56.943|S|35
+2026-08-06T13:28:35.32|S|32
+2026-08-06T14:34:06.903|R|7
+2026-08-06T15:25:27.65|S|32
+2026-08-06T16:26:23.59|S|59
+2026-08-06T16:45:17.893|V|0
+2026-08-06T17:26:41.34|R|13
+2026-08-06T18:26:16.043|S|80
+2026-08-06T18:26:35.637|V|0
+2026-08-06T18:30:16.473|R|9
+2026-08-06T19:29:44.577|S|65
+2026-08-06T19:30:00.59|V|0
+2026-08-06T20:10:37.12|R|5
+2026-08-06T20:29:10.11|S|64
+2026-08-06T20:29:26.857|V|0
+2026-08-07T06:32:01.61|S|16
+2026-08-07T06:32:16.047|V|0
+2026-08-07T08:40:10.447|S|16
+2026-08-07T10:28:32.323|S|24
+2026-08-07T11:30:44.413|S|27
+2026-08-07T12:29:42.973|S|24
+2026-08-07T13:27:09.603|S|18
+2026-08-07T15:25:58.81|S|49
+2026-08-07T15:32:27.757|V|0
+2026-08-07T16:24:00.357|S|43
+2026-08-07T16:30:03.19|V|0
+2026-08-07T17:29:13.003|V|7
+2026-08-07T18:33:09.853|S|68
+2026-08-07T19:18:58.733|V|10
+2026-08-07T19:27:37.047|S|71
+2026-08-07T22:11:19.487|S|0
+2026-08-07T22:11:28.893|V|0
+2026-08-08T10:31:59.957|S|31
+2026-08-08T10:32:14.937|V|0
+2026-08-08T11:27:43.303|S|51
+2026-08-08T12:30:09.357|S|58
+2026-08-09T10:29:40.88|S|34
+2026-08-09T11:33:08.077|S|83
+2026-08-13T15:37:46.903|S|46
+2026-08-13T15:57:54.863|V|0
+2026-08-13T17:24:20.777|V|12
+2026-08-13T18:30:02.057|S|101
+2026-08-13T18:30:22.23|V|10
+2026-08-13T19:26:36.577|S|75
+2026-08-13T20:58:27.037|S|62
+2026-08-13T20:58:42.317|V|0
+2026-08-14T10:30:50.677|S|72
+2026-08-14T10:31:04.803|V|0
+2026-08-14T11:29:48.997|S|63
+2026-08-14T12:27:25.29|S|58
+2026-08-14T14:34:59.85|S|25
+2026-08-14T16:33:21.167|V|0
+2026-08-14T17:28:59.803|S|85
+2026-08-14T17:38:46.75|V|2
+2026-08-14T18:53:09.66|V|0
+2026-08-14T19:26:05.883|S|56
+2026-08-14T21:59:42.433|S|0
+2026-08-15T08:30:45.3|S|24
+2026-08-15T10:28:52.533|S|59
+2026-08-15T10:29:11.08|V|0
+2026-08-15T13:33:06.17|S|58
+2026-08-15T13:33:07.107|V|0
+2026-08-15T13:34:11.273|V|4
+2026-08-15T15:30:16.917|S|65
+2026-08-15T15:30:34.57|V|8
+2026-08-15T16:24:34.213|V|0
+2026-08-15T16:41:46.89|V|0
+2026-08-15T17:32:14.82|S|46
+2026-08-15T18:32:27.437|S|64
+2026-08-15T18:32:44.703|V|5
+2026-08-15T21:08:19.523|S|0
+2026-08-15T21:08:35.777|V|0
+2026-08-16T08:30:18.307|S|23
+2026-08-16T09:46:46.193|S|51
+2026-08-16T10:39:15.797|S|50
+2026-08-16T10:39:30.39|V|0
+2026-08-16T11:34:26.1|V|0
+2026-08-16T11:40:46.417|S|98
+2026-08-16T12:25:34.677|V|0
+2026-08-16T12:29:43.27|S|92
+2026-08-16T13:34:14.5|S|134
+2026-08-16T13:34:29.533|V|0
+2026-08-16T14:33:47.047|S|120
+2026-08-16T14:34:02.937|V|0
+2026-08-16T15:29:19.14|S|129
+2026-08-16T15:29:35.187|V|0
+2026-08-16T16:41:47.427|S|139
+2026-08-16T16:42:09.193|V|0
+2026-08-16T18:37:29.423|S|174
+2026-08-16T18:37:44.643|V|2
+2026-08-16T19:34:08.557|S|134
+2026-08-16T19:34:23.01|V|5
+2026-08-16T20:30:46.283|S|118
+2026-08-17T06:33:07.977|S|38
+2026-08-17T08:27:32.02|S|72
+2026-08-17T09:04:58.083|R|38
+2026-08-17T09:26:08.373|S|112
+2026-08-17T09:28:06.567|R|50
+2026-08-17T10:29:16.917|R|95
+2026-08-17T10:32:38.183|S|182
+2026-08-17T10:32:52.137|V|0
+2026-08-17T11:29:09.577|S|191
+2026-08-17T12:35:54.503|S|298
+2026-08-17T13:03:12.203|R|70
+2026-08-17T13:19:34.093|R|58
+2026-08-17T13:31:50.477|S|151
+2026-08-17T14:17:55.67|R|43
+2026-08-17T14:25:22.043|S|186
+2026-08-17T15:07:06.357|R|41
+2026-08-17T15:31:15.93|S|176
+2026-08-17T16:27:10.453|S|210
+2026-08-17T16:27:23.97|V|0
+2026-08-17T16:44:36.44|R|39
+2026-08-17T17:27:30.6|V|0
+2026-08-17T17:39:01.057|R|34
+2026-08-17T17:57:31.397|S|214
+2026-08-17T18:29:09.557|R|41
+2026-08-17T18:38:47.757|S|210
+2026-08-17T18:39:02.853|V|6
+2026-08-17T19:40:46.133|S|146
+2026-08-17T20:31:09.953|S|128
+2026-08-17T20:31:12.657|V|40
+2026-08-17T21:21:01.483|R|20
+2026-08-17T21:41:15.43|S|99
+2026-08-17T21:41:31.29|V|2
+2026-08-17T22:22:33.453|R|10
+2026-08-17T22:50:43.84|S|65
+2026-08-17T22:54:09.863|V|0
+2026-08-17T23:54:52.213|S|0
+2026-08-18T14:52:51.223|S|281
+2026-08-18T15:32:24.673|R|50
+2026-08-18T15:43:57.38|S|276
+2026-08-18T16:41:44.8|R|50
+2026-08-18T16:49:56.76|S|261
+2026-08-18T17:22:40.877|S|205
+2026-08-18T18:31:34.17|S|186
+2026-08-18T18:47:33.737|R|45
+2026-08-18T19:27:55.64|R|41
+2026-08-18T19:42:29.03|S|172
+2026-08-18T20:32:05.517|S|127
+2026-08-18T20:38:50.917|R|20
+2026-08-18T21:29:34.357|R|19
+2026-08-18T22:30:13.273|S|64
+2026-08-19T05:45:51.157|S|24
+2026-08-19T06:30:38.37|R|1
+2026-08-19T06:42:38.233|S|47
+2026-08-19T07:27:02.237|S|50
+2026-08-19T08:28:54.593|S|109
+2026-08-19T09:26:11.1|S|145
+2026-08-19T10:31:19.587|S|181
+2026-08-19T10:40:35.55|R|36
+2026-08-19T11:23:01.377|S|185
+2026-08-19T11:49:41.17|R|83
+2026-08-19T12:25:20.423|S|241
+2026-08-19T12:33:47.78|R|50
+2026-08-19T13:26:37.293|R|53
+2026-08-19T13:37:30.777|S|224
+2026-08-19T14:26:23.277|S|251
+2026-08-19T14:34:40.51|R|51
+2026-08-19T15:29:10.043|V|0
+2026-08-19T15:32:26.417|S|163
+2026-08-19T16:29:03.5|S|225
+2026-08-19T16:44:27.453|V|10
+2026-08-19T17:29:05.717|S|217
+2026-08-19T17:37:12.333|R|23
+2026-08-19T17:53:52.707|V|17
+2026-08-19T18:26:07.743|S|172
+2026-08-19T18:30:31.347|V|18
+2026-08-19T19:26:30.653|R|16
+2026-08-19T19:28:55.813|S|142
+2026-08-19T19:51:28.753|V|0
+2026-08-19T20:25:09.47|S|114
+2026-08-19T21:33:20.907|R|24
+2026-08-19T22:31:39.197|S|72
+2026-08-19T22:41:03.257|V|0
+2026-08-20T00:05:54.44|S|0
+2026-08-20T05:56:13.943|R|0
+2026-08-20T06:25:58.38|S|75
+2026-08-20T06:27:52.04|R|15
+2026-08-20T07:26:27.677|R|27
+2026-08-20T07:32:19.167|S|87
+2026-08-20T08:37:14.513|S|101
+2026-08-20T08:40:17.943|R|37
+2026-08-20T09:24:33.623|S|156
+2026-08-20T09:37:37.537|R|47
+2026-08-20T10:26:16.237|S|139
+2026-08-20T10:32:21.657|R|50
+2026-08-20T11:41:15.723|R|49
+2026-08-30T08:12:34.5|S|45
+2026-08-30T08:14:02.1|V|0
+2026-08-30T09:10:18.7|S|68
+2026-08-30T09:15:44.2|R|9
+2026-08-30T10:05:51.3|S|92
+2026-08-30T10:31:07.9|V|3
+2026-08-30T11:22:16.4|S|128
+2026-08-30T11:33:29.6|R|14
+2026-08-30T12:18:42.8|S|171
+2026-08-30T12:47:05.2|V|8
+2026-08-30T13:11:53.6|S|219
+2026-08-30T13:36:21.4|R|22
+2026-08-30T14:09:37.1|S|252
+2026-08-30T14:44:12.9|V|5
+2026-08-30T15:21:48.3|S|268
+2026-08-30T15:52:03.7|R|19
+2026-08-30T16:16:29.5|S|231
+2026-08-30T16:48:56.2|V|0
+2026-08-30T17:14:11.8|S|188
+2026-08-30T17:42:33.4|R|11
+2026-08-30T18:09:47.6|S|142
+2026-08-30T18:37:15.9|V|0
+2026-08-30T19:03:22.1|S|97`;
+
+/* First tennis reading, read off the RecSports board on Oct 3 2026.
+   source_updated_at | court 1..10 | spectators */
+const TENNIS_SNAPSHOT = `2026-10-03T10:55:13.743|4,2,0,2,2,0,4,2,6,4|0`;
+
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const H0 = 5, H1 = 23;
+
+/* Rows logged before is_closed was added to the sheet have no flag. These are
+   the 13 that were closed, all of them the volleyball court. Harmless once
+   every row carries the column. */
+const CLOSED_BACKFILL = new Set([
+  "V|2026-08-01T19:32", "V|2026-08-02T11:32", "V|2026-08-04T06:35",
+  "V|2026-08-05T07:28", "V|2026-08-06T05:36", "V|2026-08-07T06:32",
+  "V|2026-08-08T10:32", "V|2026-08-14T10:31", "V|2026-08-14T18:53",
+  "V|2026-08-15T21:08", "V|2026-08-17T10:32", "V|2026-08-17T22:54",
+  "V|2026-08-19T22:41"
+]);
+const isTrue = v => /^(true|yes|1|__yes__)$/i.test(String(v||"").trim());
+
+let rows = [], loc = "SWRC Weight Room", range = "term";
+
+/* ---------- parsing ---------- */
+// source_updated_at is already naive US/Eastern, so no conversion needed.
+// Google Sheets rewrites timestamps on import: "2026-08-01T10:27:25.82"
+// comes back as "2026-08-01 10:27:26" — space separator, no fractional
+// seconds, rounded up, and sometimes a 1-digit hour ("2026-08-02 9:28:28").
+// Accept every one of those shapes.
+function parseLocal(s){
+  const m = String(s).match(/(\d{4})-(\d{1,2})-(\d{1,2})[T ](\d{1,2}):(\d{2}):(\d{2})/);
+  if(!m) return null;
+  return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+}
+/* Sub-second rounding means an exact string match can't be trusted, so the
+   closed-row lookup is keyed to the minute instead. Polls are hourly, so a
+   location can't have two readings inside one minute. */
+function minuteKey(code, s){
+  const d = parseLocal(s);
+  if(!d) return code+"|?";
+  const p = n => String(n).padStart(2,"0");
+  return code+"|"+d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+
+         "T"+p(d.getHours())+":"+p(d.getMinutes());
+}
+function fromSnapshot(txt){
+  return txt.trim().split("\n").filter(Boolean).map(l=>{
+    const [src,code,cnt] = l.split("|");
+    const meta = BY_CODE[code];
+    const count = +cnt;
+    return {t:parseLocal(src), name:meta.name, cap:meta.cap, posted:meta.posted, count, iso:src,
+            closed: CLOSED_BACKFILL.has(minuteKey(code,src)) ||
+                    (meta.zeroMeansClosed && count===0)};
+  }).filter(r=>r.t);
+}
+function fromCSV(txt){
+  const lines = txt.trim().split(/\r?\n/);
+  const head = lines[0].split(",").map(s=>s.trim());
+  const ix = n => head.indexOf(n);
+  const iName = ix("location_name"), iCnt = ix("last_count"),
+        iCap = ix("total_capacity"), iSrc = ix("source_updated_at"),
+        iCls = ix("is_closed");                 // -1 on older sheets
+  if(iName<0||iCnt<0||iSrc<0) throw new Error("unexpected columns");
+  // Tennis tab only: court_1..court_10 and spectators
+  const iCourt = Array.from({length:COURTS},(_,k)=>ix("court_"+(k+1)));
+  const hasCourts = iCourt.every(k=>k>=0), iSpec = ix("spectators");
+  const out = [];
+  for(let i=1;i<lines.length;i++){
+    const c = lines[i].split(",");
+    if(c.length < head.length - (iCls<0?0:1)) continue;
+    const raw = c[iName].trim();
+    const name = ALIASES[raw] || raw;
+    if(!LOCS[name]) continue;
+    const src = c[iSrc].trim();
+    const t = parseLocal(src);
+    if(!t) continue;
+    const flagged = iCls >= 0 && isTrue(c[iCls]);
+    const count = +c[iCnt];
+    const meta = LOCS[name];
+    // total_capacity is the posted number; the scale comes from LOCS instead.
+    const row = {t, name, cap:meta.cap, posted:+c[iCap] || meta.posted, count, iso:src,
+              closed: flagged || CLOSED_BACKFILL.has(minuteKey(meta.code,src)) ||
+                      (meta.zeroMeansClosed && count===0)};
+    if(hasCourts){
+      row.courts = iCourt.map(k=>+c[k]||0);
+      row.spec = iSpec>=0 ? (+c[iSpec]||0) : 0;
+    }
+    out.push(row);
+  }
+  return out;
+}
+function tennisFromSnapshot(txt){
+  return txt.trim().split("\n").filter(Boolean).map(l=>{
+    const [src,cs,sp] = l.split("|");
+    const courts = cs.split(",").map(Number);
+    const count = courts.reduce((a,b)=>a+b,0) + (+sp||0);
+    return {t:parseLocal(src), name:"SWRC Tennis Courts", cap:40, posted:40, count, iso:src,
+            closed:false, courts, spec:+sp||0};
+  }).filter(r=>r.t);
+}
+
+/* ---------- helpers ---------- */
+const dow = d => d.getDay();                     // 0 = Sun, matching DAYS
+const isWeekendDay = i => i===0 || i===6;        // by DAYS index
+const ymd = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+/* Not clamped. A count above the posted limit is real information — a queue
+   at the door, or staff letting extra people in — not a broken reading. */
+const pct = r => r.cap ? 100*r.count/r.cap : 0;
+function quantile(a,q){
+  if(!a.length) return null;
+  const s=[...a].sort((x,y)=>x-y), p=(s.length-1)*q, lo=Math.floor(p), hi=Math.ceil(p);
+  return lo===hi ? s[lo] : s[lo]+(s[hi]-s[lo])*(p-lo);
+}
+function hourLabel(h){
+  if(h===0) return "12a"; if(h===12) return "12p";
+  return h<12 ? h+"a" : (h-12)+"p";
+}
+function ago(d){
+  const m = Math.round((Date.now()-d.getTime())/60000);
+  if(m<60) return m+" min ago";
+  const h = Math.floor(m/60);
+  return h<24 ? h+"h "+(m%60)+"m ago" : Math.floor(h/24)+"d ago";
+}
+/* Continuous plate-colour ramp, green→red, instead of three hard bands —
+   a room at 50% now reads as genuinely in-between rather than jumping
+   straight to "filling" yellow. Stops widen the green zone (still green
+   to ~40%) and add transitional yellow-green/orange steps between the
+   three original plate colours. */
+const RAMP_STOPS = [
+  {p:0,   c:[47,125,58]},    // #2F7D3A green
+  {p:40,  c:[143,180,53]},   // yellow-green
+  {p:65,  c:[232,181,23]},   // #E8B517 yellow
+  {p:85,  c:[217,116,34]},   // orange
+  {p:110, c:[200,50,43]}     // #C8322B red
+];
+function crowdColor(p){
+  p = Math.max(0,p);
+  const s = RAMP_STOPS;
+  if(p>=s[s.length-1].p) return rgbStr(s[s.length-1].c);
+  for(let i=0;i<s.length-1;i++){
+    const a=s[i], b=s[i+1];
+    if(p>=a.p && p<=b.p){
+      const t=(p-a.p)/(b.p-a.p);
+      return rgbStr(a.c.map((v,ix)=>Math.round(v+(b.c[ix]-v)*t)));
+    }
+  }
+  return rgbStr(s[0].c);
+}
+function rgbStr(c){ return "rgb("+c[0]+","+c[1]+","+c[2]+")"; }
+
+/* Hour-by-hour heatmap reads on raw headcount, not % of capacity, and takes
+   its cut points from whichever room is selected — see LOCS.bands. */
+function bands(){ return LOCS[loc].bands; }
+function countColor(n){
+  const b = bands();
+  if(n>b[2])  return "#C8322B";  // packed
+  if(n>=b[1]) return "#D97422";  // busy
+  if(n>=b[0]) return "#8FB435";  // normal
+  return "#2F7D3A";              // quiet
+}
+/* The legend is the only place the current cut points are written down, so it
+   is rebuilt per room rather than hard-coded in the markup. */
+function renderLegend(){
+  const b = bands();
+  document.getElementById("legend").innerHTML =
+    [["#2F7D3A","Quiet","under "+b[0]],
+     ["#8FB435","Normal",b[0]+"\u2013"+b[1]],
+     ["#D97422","Busy",b[1]+"\u2013"+b[2]],
+     ["#C8322B","Packed","over "+b[2]]]
+      .map(([c,name,r])=>"<span><i class='sw' style='background:"+c+"'></i>"+
+        name+" <span class='dim'>"+r+"</span></span>").join("")+
+    "<span><i class='sw' style='background:var(--rack)'></i>No readings</span>"+
+    "<span><i class='sw' style='background:#D97422;opacity:.4'></i>Faded = one reading only</span>";
+}
+
+/* ---------- selection ---------- */
+/* is_closed is authoritative. A count of 0 with is_closed false is the gym
+   genuinely open and empty, which is a real (and useful) quiet reading —
+   46 of the 59 zeros in this data are exactly that. Only drop rows the
+   board itself flags as closed. */
+function selected(){
+  let r = rows.filter(x=>x.name===loc && !x.closed);
+  if(range==="term") r = r.filter(x=>ymd(x.t) >= TERM_START);
+  return r.sort((a,b)=>a.t-b.t);
+}
+
+/* ---------- render: now ---------- */
+function renderNow(all){
+  const mine = rows.filter(x=>x.name===loc).sort((a,b)=>a.t-b.t);
+  const last = mine[mine.length-1];
+  const cap = LOCS[loc].cap;
+  if(!last){ document.getElementById("nowCount").textContent="—"; return; }
+  const p = pct(last);
+  document.getElementById("nowCount").textContent = last.count;
+  document.getElementById("nowOf").textContent = "of "+cap;
+  document.getElementById("nowPct").innerHTML = last.closed
+    ? "<b>Closed</b> right now"
+    : "<b>"+Math.round(p)+"%</b> full";
+  document.getElementById("nowAgo").textContent = ago(last.t);
+  const bar = document.getElementById("nowBar");
+  bar.style.width = Math.min(100,p)+"%";   // fill can't exceed the track
+  bar.style.background = crowdColor(p);
+
+}
+
+/* ---------- render: quietest hours ---------- */
+function renderSlots(data){
+  const buckets = {};
+  data.forEach(r=>{
+    const h = r.t.getHours();
+    if(h<H0||h>H1) return;
+    (buckets[h] = buckets[h] || []).push(pct(r));
+  });
+  const ranked = Object.entries(buckets)
+    .filter(([,v])=>v.length>=2)
+    .map(([h,v])=>({h:+h, med:quantile(v,.5), n:v.length}))
+    .sort((a,b)=>a.med-b.med).slice(0,3);
+  const el = document.getElementById("slots");
+  if(!ranked.length){
+    el.innerHTML = '<span class="dim">Not enough readings yet — need 2+ in an hour.</span>';
+    return;
+  }
+  el.innerHTML = ranked.map(s=>
+    "<b>"+hourLabel(s.h)+"–"+hourLabel((s.h+1)%24)+"</b> "+Math.round(s.med)+"%"
+  ).join('<span class="sep">·</span>');
+}
+
+/* ---------- render: heatmap ---------- */
+let HEAT = {};
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const shortDate = d => MONTHS[d.getMonth()]+". "+d.getDate();
+
+// Line 1 is always the summary; line 2 (dates + counts, no time restated —
+// the hour is already named on line 1) only appears once the cell is locked.
+function heatReadout(d,hr,withHistory){
+  const v = HEAT[d+"|"+hr];
+  const el = document.getElementById("hmRead");
+  if(!v){
+    el.innerHTML = "<b>"+DAYS[d]+" "+hourLabel(hr)+"</b> <span class='dim'>· no readings yet</span>";
+    return;
+  }
+  const med = quantile(v.p,.5), lo = Math.min(...v.c), hi = Math.max(...v.c);
+  let html = "<b>"+DAYS[d]+" "+hourLabel(hr)+"–"+hourLabel((hr+1)%24)+"</b> · <b>"+
+    Math.round(med)+"%</b> typical · "+
+    (lo===hi ? lo+" people" : lo+"–"+hi+" people")+
+    " <span class='dim'>· "+v.p.length+(v.p.length===1?" reading (provisional)":" readings")+"</span>";
+  if(withHistory){
+    const rows = v.rows.slice().sort((a,b)=>b.t-a.t);   // newest first
+    html += "<div class='histlist'>"+rows.map(r=>
+      "<span class='histrow'><i class='dot' style='background:"+countColor(r.count)+"'></i>"+
+      shortDate(r.t)+" → "+r.count+"</span>").join("")+"</div>";
+  }
+  el.innerHTML = html;
+}
+function renderHeat(data){
+  HEAT = {};
+  data.forEach(r=>{
+    const hr = r.t.getHours();
+    if(hr<H0||hr>H1) return;
+    const k = dow(r.t)+"|"+hr;
+    (HEAT[k] = HEAT[k] || {p:[],c:[],rows:[]});
+    HEAT[k].p.push(pct(r)); HEAT[k].c.push(r.count); HEAT[k].rows.push(r);
+  });
+  let html = "<tr><th class='day'></th>";
+  for(let hr=H0;hr<=H1;hr++) html += "<th>"+(hr%2===H0%2?hourLabel(hr):"")+"</th>";
+  html += "</tr>";
+  for(let d=0;d<7;d++){
+    html += "<tr><th class='day'>"+DAYS[d]+"</th>";
+    for(let hr=H0;hr<=H1;hr++){
+      const v = HEAT[d+"|"+hr];
+      const at = " data-d='"+d+"' data-h='"+hr+"'";
+      if(!v) html += "<td"+at+"></td>";
+      else{
+        const cm = quantile(v.c,.5), solo = v.c.length===1;
+        html += "<td"+at+" style='background:"+countColor(cm)+";opacity:"+
+          (solo?0.4:1)+"' title='"+DAYS[d]+" "+hourLabel(hr)+
+          " · "+Math.round(cm)+" people'></td>";
+      }
+    }
+    html += "</tr>";
+  }
+  const tbl = document.getElementById("hm");
+  tbl.innerHTML = html;
+
+  let locked = null;
+  const mark = td => {
+    tbl.querySelectorAll("td.sel").forEach(x=>x.classList.remove("sel"));
+    if(td) td.classList.add("sel");
+  };
+  const show = e => {
+    const td = e.target.closest("td[data-d]");
+    if(!td) return;
+    mark(td);
+    heatReadout(+td.dataset.d, +td.dataset.h, false);
+  };
+  tbl.addEventListener("mousemove", e=>{ if(!locked) show(e); });
+  tbl.addEventListener("mouseleave", ()=>{
+    if(locked) return;
+    mark(null);
+    document.getElementById("hmRead").innerHTML =
+      "<span class='dim'>Hover any block for that hour\u2019s numbers, or tap to lock it and see its history.</span>";
+  });
+  // tap locks a cell so the readout survives lifting your finger, and adds
+  // its history as a second line inside the same box
+  tbl.addEventListener("click", e=>{
+    const td = e.target.closest("td[data-d]");
+    if(!td) return;
+    locked = (locked===td) ? null : td;
+    mark(locked);
+    heatReadout(+td.dataset.d, +td.dataset.h, !!locked);
+  });
+}
+
+/* ---------- render: a chosen day vs typical ---------- */
+/* chartDay is a DAYS index (0 = Sun). It starts on today and the picker only
+   moves which day the solid line is drawn from — the shaded comparison band
+   still pools weekdays (or both weekend days), because a single weekday still
+   has too few same-hour readings to average on its own. */
+let chartDay = dow(new Date());
+
+function renderChart(data){
+  const isToday = chartDay === dow(new Date());
+  // the most recent date in range that falls on the chosen weekday
+  const dates = [...new Set(data.filter(r=>dow(r.t)===chartDay).map(r=>ymd(r.t)))].sort();
+  const focus = isToday ? ymd(new Date()) : (dates[dates.length-1] || null);
+  const focusRows = focus ? data.filter(r=>ymd(r.t)===focus) : [];
+  const weekendNow = isWeekendDay(chartDay);
+  document.getElementById("dayKind").textContent = weekendNow ? "weekend day" : "weekday";
+  document.getElementById("dayWhich").textContent =
+    isToday ? "Today" : focusRows.length ? DAYS[chartDay]+" "+shortDate(focusRows[0].t)
+                                         : DAYS[chartDay];
+
+  const band = {};
+  data.forEach(r=>{
+    if(focus && ymd(r.t)===focus) return;
+    if(isWeekendDay(dow(r.t)) !== weekendNow) return;
+    const hr=r.t.getHours(); if(hr<H0||hr>H1) return;
+    (band[hr] = band[hr] || []).push(pct(r));
+  });
+  const focusBy = {};
+  focusRows.forEach(r=>{
+    const hr=r.t.getHours(); if(hr<H0||hr>H1) return;
+    (focusBy[hr] = focusBy[hr] || []).push(r);
+  });
+
+  // A full 5a-11p axis looks zoomed-out on a day only covering, say,
+  // 8a-7p — the real readings bunch into the middle third. Trim the axis
+  // to where the data (the day's line or the typical band) actually is,
+  // padded an hour either side. Falls back to the full range with no data.
+  const dataHrs = [
+    ...Object.keys(band).filter(h=>band[h].length).map(Number),
+    ...Object.keys(focusBy).filter(h=>focusBy[h].length).map(Number)
+  ];
+  let chartH0 = H0, chartH1 = H1;
+  if(dataHrs.length){
+    chartH0 = Math.max(H0, Math.min(...dataHrs)-1);
+    chartH1 = Math.min(H1, Math.max(...dataHrs)+1);
+    if(chartH1-chartH0 < 2) chartH1 = Math.min(H1, chartH0+2);
+  }
+
+  const W=860,H=260,PL=44,PR=14,PT=14,PB=28;
+  const top = Math.max(100, ...data.map(pct));      // headroom for over-capacity
+  const x = hr => PL + (hr-chartH0)/(chartH1-chartH0)*(W-PL-PR);
+  const y = p => PT + (1-p/top)*(H-PT-PB);
+
+  let g = "";
+  const stepY = top>100 ? 50 : 25;
+  for(let p=0;p<=top;p+=stepY){
+    g += "<line x1='"+PL+"' y1='"+y(p)+"' x2='"+(W-PR)+"' y2='"+y(p)+
+         "' stroke='var(--line)' stroke-width='1'/>"+
+         "<text class='ax' x='"+(PL-8)+"' y='"+(y(p)+3.5)+"' text-anchor='end'>"+p+"%</text>";
+  }
+  if(top>100)   // mark the working capacity once the scale runs past it
+    g += "<line x1='"+PL+"' y1='"+y(100)+"' x2='"+(W-PR)+"' y2='"+y(100)+
+         "' stroke='var(--iron)' stroke-width='1.5' stroke-dasharray='5 3' opacity='.5'/>";
+  const hrRange = chartH1-chartH0;
+  const hrStep = hrRange<=6 ? 1 : hrRange<=12 ? 2 : 3;
+  for(let hr=chartH0;hr<=chartH1;hr+=hrStep)
+    g += "<text class='ax' x='"+x(hr)+"' y='"+(H-8)+"' text-anchor='middle'>"+hourLabel(hr)+"</text>";
+
+  const hrs = Object.keys(band).map(Number).filter(hr=>band[hr].length>=3).sort((a,b)=>a-b);
+  const note = document.getElementById("chartNote");
+  if(hrs.length>=3){
+    const up = hrs.map(hr=>x(hr)+","+y(quantile(band[hr],.75))).join(" ");
+    const dn = hrs.slice().reverse().map(hr=>x(hr)+","+y(quantile(band[hr],.25))).join(" ");
+    g += "<polygon points='"+up+" "+dn+"' fill='var(--iron)' opacity='.10'/>";
+    const mid = hrs.map(hr=>x(hr)+","+y(quantile(band[hr],.5))).join(" ");
+    g += "<polyline points='"+mid+"' fill='none' stroke='var(--steel)' stroke-width='1.5' stroke-dasharray='4 4'/>";
+    note.hidden = true;
+  } else {
+    note.hidden = false;
+    note.innerHTML = "<b>No comparison band yet.</b> An hour needs three readings on other "+
+      (weekendNow?"weekend days":"weekdays")+" before a typical range means anything.";
+  }
+
+  const focusPts = focusRows.filter(r=>r.t.getHours()>=H0&&r.t.getHours()<=H1);
+  const pts = focusPts.map(r=>x(r.t.getHours()+r.t.getMinutes()/60)+","+y(pct(r)));
+  if(pts.length){
+    // vertical gradient in real chart coordinates, so the colour at any
+    // height always matches the same crowd ramp used everywhere else —
+    // green low on the axis shading up through yellow/orange to red,
+    // regardless of how high the day's own line happens to reach.
+    let defs = "<defs><linearGradient id='crowdFill' gradientUnits='userSpaceOnUse' "+
+      "x1='"+PL+"' y1='"+y(0)+"' x2='"+PL+"' y2='"+y(top)+"'>";
+    RAMP_STOPS.forEach(s=>{
+      const py = Math.min(top, s.p);
+      defs += "<stop offset='"+(py/top).toFixed(3)+"' stop-color='"+crowdColor(s.p)+"'/>";
+    });
+    if(RAMP_STOPS[RAMP_STOPS.length-1].p < top)
+      defs += "<stop offset='1' stop-color='"+crowdColor(top)+"'/>";
+    defs += "</linearGradient></defs>";
+    g = defs + g;
+
+    const baseY = y(0), firstX = pts[0].split(",")[0], lastX = pts[pts.length-1].split(",")[0];
+    g += "<polygon points='"+pts.join(" ")+" "+lastX+","+baseY+" "+firstX+","+baseY+
+         "' fill='url(#crowdFill)' opacity='.3'/>";
+    g += "<polyline points='"+pts.join(" ")+"' fill='none' stroke='url(#crowdFill)' "+
+         "stroke-width='4.5' stroke-linejoin='round' stroke-linecap='round'/>";
+    pts.forEach((p,i)=>{
+      const [a,b] = p.split(",");
+      const isLast = i===pts.length-1;
+      g += "<circle cx='"+a+"' cy='"+b+"' r='"+(isLast?7.5:4.5)+"' fill='"+
+        (isLast ? crowdColor(pct(focusPts[i])) : "var(--chalk)")+"' stroke='"+
+        crowdColor(pct(focusPts[i]))+"' stroke-width='2.75'/>";
+    });
+    // direct label on the last reading — "now" only when that really is now.
+    // Sized off the string itself rather than a fixed pixel guess, so it
+    // always flips sides — or clamps — before running past the chart edge.
+    const [lx,ly] = pts[pts.length-1].split(",").map(Number);
+    const lastRow = focusPts[focusPts.length-1];
+    const labelText = Math.round(pct(lastRow))+"% "+
+      (isToday ? "now" : "at "+hourLabel(lastRow.t.getHours()));
+    const textW = labelText.length*9.6 + 4;
+    const fitsRight = lx+12+textW <= W-6;
+    const labelAnchor = fitsRight ? "start" : "end";
+    const labelX = fitsRight ? lx+12 : Math.max(6+textW, lx-12);
+    g += "<text x='"+labelX+"' y='"+(ly-12)+"' text-anchor='"+labelAnchor+"' "+
+      "font-family='IBM Plex Mono, monospace' font-size='16' font-weight='600' "+
+      "fill='var(--iron)'>"+labelText+"</text>";
+  }
+
+  // one invisible column per hour, so hover and tap both land somewhere
+  const w = (W-PL-PR)/hrRange;
+  for(let hr=chartH0;hr<=chartH1;hr++)
+    g += "<rect class='hit' data-h='"+hr+"' x='"+(x(hr)-w/2)+"' y='"+PT+
+         "' width='"+w+"' height='"+(H-PT-PB)+"'/>";
+
+  const el = document.getElementById("chart");
+  el.innerHTML = "<svg viewBox='0 0 "+W+" "+H+
+    "' role='img' aria-label='"+(isToday?"Today":DAYS[chartDay])+
+    " compared with a typical day'>"+g+"</svg>";
+
+  const read = document.getElementById("chRead");
+  const hint = "<span class='dim'>Tap or hover the chart for that hour\u2019s numbers.</span>";
+  const dayWord = isToday ? "today" : DAYS[chartDay];
+  const show = hr => {
+    let s = "<b>"+hourLabel(hr)+"\u2013"+hourLabel((hr+1)%24)+"</b> \u00b7 ";
+    const t = focusBy[hr];
+    s += t ? dayWord+" <b>"+Math.round(quantile(t.map(pct),.5))+"%</b> ("+
+             t.map(r=>r.count).join(", ")+" people)"
+           : "<span class='dim'>no reading "+dayWord+"</span>";
+    const b = band[hr];
+    s += b && b.length>=3
+      ? " \u00b7 typical <b>"+Math.round(quantile(b,.5))+"%</b> (range "+
+        Math.round(quantile(b,.25))+"\u2013"+Math.round(quantile(b,.75))+"%)"
+      : " \u00b7 <span class='dim'>typical: not enough history</span>";
+    read.innerHTML = s;
+  };
+  let locked = null;
+  el.addEventListener("mousemove", e=>{
+    const r = e.target.closest("rect.hit");
+    if(r && locked===null) show(+r.dataset.h);
+  });
+  el.addEventListener("mouseleave", ()=>{ if(locked===null) read.innerHTML = hint; });
+  el.addEventListener("click", e=>{
+    const r = e.target.closest("rect.hit");
+    if(!r) return;
+    const hr = +r.dataset.h;
+    locked = (locked===hr) ? null : hr;
+    show(hr);
+  });
+  read.innerHTML = hint;
+}
+
+/* ---------- render: tennis courts ---------- */
+/* A court reads as open (nobody on it), in play (1-4: singles or doubles) or
+   crowded (5+, usually a lesson or people waiting to rotate on). */
+const COURT_STATE = [
+  {test:n=>n===0, label:"Open",    fill:"var(--p10)"},
+  {test:n=>n<=4,  label:"In play", fill:"var(--court)"},
+  {test:()=>true, label:"Crowded", fill:"var(--p25)"}
+];
+const courtState = n => COURT_STATE.find(s=>s.test(n));
+
+// Top-down court on a 44 x 86 canvas: 36 x 78 ft doubles court plus 4 ft of runout.
+function courtSVG(n, closed){
+  const st = closed ? {fill:"var(--rack)"} : courtState(n);
+  const L = "var(--court-line)";
+  let s = "<svg viewBox='0 0 44 86' role='img' aria-label='"+(closed?"Closed":n+" on court")+"'>"+
+    "<rect width='44' height='86' rx='2' fill='"+st.fill+"'/>"+
+    "<g fill='none' stroke='"+L+"' stroke-width='.8'>"+
+    "<rect x='4' y='4' width='36' height='78'/>"+
+    "<line x1='8.5' y1='4' x2='8.5' y2='82'/><line x1='35.5' y1='4' x2='35.5' y2='82'/>"+
+    "<line x1='8.5' y1='22' x2='35.5' y2='22'/><line x1='8.5' y1='64' x2='35.5' y2='64'/>"+
+    "<line x1='22' y1='22' x2='22' y2='64'/></g>"+
+    "<line x1='1.5' y1='43' x2='42.5' y2='43' stroke='"+L+"' stroke-width='1.6'/>";
+  if(!closed && n>0){
+    // one ball-yellow dot per player, split across the net, max two a side
+    const top = Math.min(2, Math.ceil(n/2)), bot = Math.min(2, Math.floor(n/2));
+    const xs = k => k===1 ? [22] : [14,30];
+    xs(top).forEach(x=>{ s += "<circle cx='"+x+"' cy='13' r='3.6' fill='var(--p15)' stroke='var(--iron)' stroke-width='.7'/>"; });
+    xs(bot).forEach(x=>{ s += "<circle cx='"+x+"' cy='73' r='3.6' fill='var(--p15)' stroke='var(--iron)' stroke-width='.7'/>"; });
+    if(n>4) s += "<text x='22' y='36' text-anchor='middle' font-family='IBM Plex Mono, monospace' "+
+      "font-size='9' font-weight='600' fill='"+L+"'>+"+(n-4)+"</text>";
+  }
+  return s+"</svg>";
+}
+
+function renderCourts(){
+  const mine = rows.filter(r=>isTennis(r.name) && r.courts).sort((a,b)=>a.t-b.t);
+  const last = mine[mine.length-1];
+  const grid = document.getElementById("courtGrid");
+  if(!last){ grid.innerHTML = "<span class='dim'>No court readings yet.</span>"; return; }
+  const open = last.courts.filter(n=>n===0).length;
+  document.getElementById("courtsWhen").textContent =
+    "· as of "+shortDate(last.t)+", "+hourLabel(last.t.getHours()).replace(/[ap]$/,"")+
+    ":"+String(last.t.getMinutes()).padStart(2,"0")+(last.t.getHours()<12?"a":"p");
+  document.getElementById("courtSum").innerHTML = last.closed
+    ? "<span><b>Closed</b></span>"
+    : "<span><b>"+open+"</b> of "+COURTS+" open</span>"+
+      "<span><b>"+(COURTS-open)+"</b> in use</span>"+
+      "<span><b>"+last.spec+"</b> watching</span>";
+  grid.innerHTML = last.courts.map((n,i)=>{
+    const st = courtState(n);
+    return "<div class='court'>"+courtSVG(n,last.closed)+
+      "<span class='cn'><span class='w'>Court </span>"+(i+1)+"</span>"+
+      "<span class='cs'>"+(last.closed?"Closed":n===0?"Open":n+"<span class='w'> "+(n===1?"player":"players")+"</span>")+"</span></div>";
+  }).join("");
+  document.getElementById("courtLegend").innerHTML = COURT_STATE.map((s,i)=>
+    "<span><i class='sw' style='background:"+s.fill+"'></i>"+s.label+
+    " <span class='dim'>"+["0 people","1–4","5+"][i]+"</span></span>").join("");
+}
+
+/* Share of readings where a court had anyone on it, per court per hour. */
+const takenColor = f => f<.25 ? "#2F7D3A" : f<.5 ? "#8FB435" : f<.75 ? "#D97422" : "#C8322B";
+const PHONE = matchMedia("(max-width: 600px)");
+PHONE.addEventListener("change", ()=>{ if(isTennis(loc)) draw(); });
+function renderCourtHours(data){
+  const withCourts = data.filter(r=>r.courts);
+  const cell = {};
+  withCourts.forEach(r=>{
+    const hr = r.t.getHours(); if(hr<H0||hr>H1) return;
+    r.courts.forEach((n,k)=>{
+      const c = cell[k+"|"+hr] = cell[k+"|"+hr] || {n:0,taken:0,players:0};
+      c.n++; c.players += n; if(n>0) c.taken++;
+    });
+  });
+  const hrsWith = Object.keys(cell).map(k=>+k.split("|")[1]);
+  const h0 = hrsWith.length ? Math.max(H0, Math.min(...hrsWith)-1) : 7;
+  const h1 = hrsWith.length ? Math.min(H1, Math.max(...hrsWith)+1) : 22;
+
+  const td = (k,hr) => {
+    const c = cell[k+"|"+hr], at = " data-k='"+k+"' data-h='"+hr+"'";
+    return c ? "<td"+at+" style='background:"+takenColor(c.taken/c.n)+";opacity:"+(c.n===1?.4:1)+"'></td>"
+             : "<td"+at+"></td>";
+  };
+  // Wide screens: courts down the side, hours across. Phones: flipped, so the
+  // 10 courts fit across the screen and the hours scroll down with the page.
+  const tall = PHONE.matches;
+  let html = "";
+  if(tall){
+    html = "<tr><th class='row'></th>";
+    for(let k=0;k<COURTS;k++) html += "<th>"+(k+1)+"</th>";
+    html += "</tr>";
+    for(let hr=h0;hr<=h1;hr++){
+      html += "<tr><th class='row'>"+hourLabel(hr)+"</th>";
+      for(let k=0;k<COURTS;k++) html += td(k,hr);
+      html += "</tr>";
+    }
+  } else {
+    html = "<tr><th class='row'></th>";
+    for(let hr=h0;hr<=h1;hr++) html += "<th>"+hourLabel(hr)+"</th>";
+    html += "</tr>";
+    for(let k=0;k<COURTS;k++){
+      html += "<tr><th class='row'>Ct "+(k+1)+"</th>";
+      for(let hr=h0;hr<=h1;hr++) html += td(k,hr);
+      html += "</tr>";
+    }
+  }
+  const tbl = document.getElementById("ch");
+  tbl.classList.toggle("tall", tall);
+  document.getElementById("chAxis").textContent = tall ? "Court number across, hour down" : "";
+  tbl.innerHTML = html;
+
+  // overall best bet, needs a few readings to mean anything
+  const tot = Array.from({length:COURTS},()=>({n:0,taken:0}));
+  withCourts.forEach(r=>r.courts.forEach((n,k)=>{ tot[k].n++; if(n>0) tot[k].taken++; }));
+  const read = document.getElementById("chHourRead");
+  const ranked = tot.map((t,k)=>({k, free: t.n ? 1-t.taken/t.n : null, n:t.n}))
+    .filter(t=>t.free!==null).sort((a,b)=>b.free-a.free);
+  const hint = withCourts.length>=3 && ranked.length
+    ? "Most often free: <b>Court "+(ranked[0].k+1)+"</b> ("+Math.round(ranked[0].free*100)+
+      "% of "+withCourts.length+" readings). <span class='dim'>Tap a block for that hour.</span>"
+    : "<span class='dim'>Only "+withCourts.length+" court reading"+(withCourts.length===1?"":"s")+
+      " so far. Each poll adds one; patterns show up after a week or two.</span>";
+  read.innerHTML = hint;
+
+  const show = td => {
+    tbl.querySelectorAll("td.sel").forEach(x=>x.classList.remove("sel"));
+    if(!td){ read.innerHTML = hint; return; }
+    td.classList.add("sel");
+    const k = +td.dataset.k, hr = +td.dataset.h, c = cell[k+"|"+hr];
+    read.innerHTML = "<b>Court "+(k+1)+" · "+hourLabel(hr)+"–"+hourLabel((hr+1)%24)+"</b> · "+
+      (c ? "taken in <b>"+c.taken+" of "+c.n+"</b> readings · "+
+           (c.players/c.n).toFixed(1)+" people on average"
+         : "<span class='dim'>no readings yet</span>");
+  };
+  let locked = null;
+  tbl.onmousemove = e=>{ const td = e.target.closest("td[data-k]"); if(td && !locked) show(td); };
+  tbl.onmouseleave = ()=>{ if(!locked) show(null); };
+  tbl.onclick = e=>{
+    const td = e.target.closest("td[data-k]"); if(!td) return;
+    locked = locked===td ? null : td;
+    show(locked || td);
+  };
+  document.getElementById("chLegend").innerHTML =
+    [["#2F7D3A","Usually free","taken < 25%"],["#8FB435","Often free","25–50%"],
+     ["#D97422","Often taken","50–75%"],["#C8322B","Usually taken","75%+"]]
+    .map(([c,n,r])=>"<span><i class='sw' style='background:"+c+"'></i>"+n+" <span class='dim'>"+r+"</span></span>").join("")+
+    "<span><i class='sw' style='background:var(--rack)'></i>No readings</span>";
+}
+
+/* ---------- controls ---------- */
+function buildControls(){
+  document.getElementById("locSeg").innerHTML = Object.entries(LOCS)
+    .map(([n,m])=>"<button data-loc=\""+n+"\" aria-pressed='"+(n===loc)+"'>"+m.short+"</button>").join("");
+  document.getElementById("rangeSeg").innerHTML =
+    "<button data-range='term' aria-pressed='"+(range==="term")+"'>This term</button>"+
+    "<button data-range='all'  aria-pressed='"+(range==="all")+"'>All time</button>";
+  document.getElementById("daySeg").innerHTML = DAYS
+    .map((d,i)=>"<button data-day='"+i+"' aria-pressed='"+(i===chartDay)+"'>"+d+"</button>").join("");
+  document.querySelectorAll("#daySeg button").forEach(b=>
+    b.onclick=()=>{chartDay=+b.dataset.day;buildControls();draw();});
+  document.querySelectorAll("#locSeg button").forEach(b=>
+    b.onclick=()=>{loc=b.dataset.loc;buildControls();draw();});
+  document.querySelectorAll("#rangeSeg button").forEach(b=>
+    b.onclick=()=>{range=b.dataset.range;buildControls();draw();});
+}
+
+function draw(){
+  const data = selected();
+  renderLegend();
+  renderNow();
+  renderSlots(data);
+  renderHeat(data);
+  renderChart(data);
+  const tennis = isTennis(loc);
+  document.getElementById("courtsNow").hidden = !tennis;
+  document.getElementById("courtsHour").hidden = !tennis;
+  if(tennis){ renderCourts(); renderCourtHours(data); }
+  const span = data.length ? ymd(data[0].t)+" → "+ymd(data[data.length-1].t) : "no readings";
+  document.getElementById("foot").textContent =
+    data.length + " readings · " + span +
+    (range==="term" ? " · fall term only" : " · includes summer session");
+}
+
+async function loadTennis(){
+  if(TENNIS_CSV_URL){
+    try{
+      const res = await fetch(TENNIS_CSV_URL, {cache:"no-store"});
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      // drop repeat rows of the same board reading (same source timestamp)
+      const seen = new Set();
+      const t = fromCSV(await res.text()).filter(r=>{
+        const k = r.t.getTime();
+        if(!isTennis(r.name) || seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+      if(t.length) return t;
+    }catch(e){ /* fall through to snapshot */ }
+  }
+  return tennisFromSnapshot(TENNIS_SNAPSHOT);
+}
+
+async function load(){
+  let ok = false;
+  const tennisP = loadTennis();
+  if(CSV_URL){
+    try{
+      const res = await fetch(CSV_URL, {cache:"no-store"});
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      // the Log tab never carries tennis; it comes from its own tab below
+      rows = fromCSV(await res.text()).filter(r=>!isTennis(r.name));
+      if(rows.length){ ok = true;
+        const latest = rows.reduce((m,r)=> r.t>m ? r.t : m, rows[0].t);
+        document.getElementById("stamp").textContent = "Live · sheet updated "+
+          latest.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+      }
+    }catch(e){
+      document.getElementById("stamp").textContent = "Live feed unreachable — showing snapshot";
+    }
+  }
+  if(!ok){
+    rows = fromSnapshot(SNAPSHOT);
+    if(!CSV_URL) document.getElementById("stamp").textContent = "Snapshot through 30 Aug 2026 · add a CSV URL to go live";
+  }
+  rows = rows.concat(await tennisP);
+  buildControls();
+  draw();
+}
+
+/* ---------- live data through the viewer's Google Drive connector ----------
+   Inside claude.ai the page can't fetch docs.google.com directly, so it asks
+   the Google Drive connector for the whole workbook (both tabs) as .xlsx and
+   reads it with SheetJS. Outside claude.ai, load() above still uses the
+   published CSV links. */
+const SHEET_ID = "1eljH8rFfFfkLiBe2xU6VAUBWalAzWHAgC5wdla8Ah9A";
+const DRIVE = "Google Drive";
+const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const stamp = t => { document.getElementById("stamp").textContent = t; };
+const fmtWhen = d => d.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+
+function uniqueReadings(list){
+  const seen = new Set();
+  return list.filter(r=>{ const k = r.name+"|"+r.t.getTime(); if(seen.has(k)) return false; seen.add(k); return true; });
+}
+function showSnapshot(note){
+  rows = fromSnapshot(SNAPSHOT).concat(tennisFromSnapshot(TENNIS_SNAPSHOT));
+  stamp(note);
+  buildControls(); draw();
+}
+function applyWorkbook(b64){
+  const wb = XLSX.read(b64, {type:"base64"});
+  const csv = name => wb.Sheets[name] ? XLSX.utils.sheet_to_csv(wb.Sheets[name], {blankrows:false}) : "";
+  const log = csv("Log") ? fromCSV(csv("Log")).filter(r=>!isTennis(r.name)) : [];
+  const ten = csv("Tennis") ? fromCSV(csv("Tennis")).filter(r=>isTennis(r.name)) : [];
+  if(!log.length) throw new Error("empty");
+  rows = uniqueReadings(log.concat(ten.length ? ten : tennisFromSnapshot(TENNIS_SNAPSHOT)));
+  const latest = log.reduce((m,r)=> r.t>m ? r.t : m, log[0].t);
+  stamp("Live · newest reading "+fmtWhen(latest));
+  buildControls(); draw();
+}
+function driveError(err){
+  const code = err && err.code;
+  if(code==="server_not_connected" || code==="selection_required")
+    return showSnapshot("Add Google Drive in claude.ai Settings → Connectors for live data · showing snapshot");
+  if(code==="needs_reauth")
+    return showSnapshot("Reconnect Google Drive in claude.ai Settings → Connectors · showing snapshot");
+  if(code==="not_in_manifest" || code==="blocked_by_policy" || code==="approval_required" || code==="not_granted")
+    return showSnapshot("Google Drive is off for this page · showing snapshot");
+  // transient: keep whatever is on screen, just say so
+  stamp("Couldn’t reach Google Drive just now · retrying in 5 min");
+}
+
+async function boot(){
+  showSnapshot("Snapshot through 30 Aug 2026 · loading live data…");
+  const mcp = window.claude && window.claude.use ? await window.claude.use("mcp").catch(()=>null) : null;
+  if(!mcp || typeof XLSX === "undefined"){
+    await load();                                  // outside claude.ai: published CSV links
+    if(CSV_URL) setInterval(load, REFRESH_MS);
+    return;
+  }
+  mcp.watchTool(DRIVE, "download_file_content",
+    {fileId: SHEET_ID, exportMimeType: XLSX_TYPE},
+    ev=>{
+      if(ev.type==="error") return driveError(ev.error);
+      const p = ev.result && ev.result.payload;
+      const b64 = p && typeof p==="object" ? p.content : null;
+      if(!b64) return stamp("Google Drive sent an unexpected reply · showing last data");
+      try{ applyWorkbook(b64); }
+      catch(e){ stamp("Couldn’t read the sheet · showing last data"); }
+    },
+    {refetchInterval: 5*60*1000});
+}
+boot();
+</script>
+
+</body></html>

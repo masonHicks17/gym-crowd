@@ -1,0 +1,70 @@
+name: refresh hours
+
+# RecSports edits its hours page whenever a holiday or break comes up, and the
+# dashboard carries a baked-in copy (their page sends no CORS header, so the
+# browser cannot read it directly). This re-scrapes it every morning, commits
+# any change, and redeploys so the "as posted" stamp on the page is current.
+on:
+  schedule:
+    - cron: "30 11 * * *"      # 11:30 UTC = 6:30 ET in winter, 7:30 ET in summer
+  workflow_dispatch:            # and a "Run workflow" button for when you want it now
+
+concurrency:
+  group: refresh-hours
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write           # to commit the refreshed hours back
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Scrape recsports.ufl.edu
+        run: python3 hours.py
+
+      - name: Check the result is sane before shipping it
+        # A page that still has the headings but no times under them would
+        # otherwise sail through and wipe the schedule.
+        run: |
+          python3 - <<'PY'
+          import io, json, re, sys
+          s = io.open("index.html", encoding="utf-8").read()
+          m = re.search(r"/\* HOURS-DATA-START \*/\nconst HOURS = (.*?);\n/\* HOURS-DATA-END \*/", s, re.S)
+          if not m: sys.exit("no HOURS block")
+          d = json.loads(m.group(1))
+          for k in ("SWRC", "SRFC", "UVS", "TENNIS"):
+              f = d["fac"].get(k)
+              if not f: sys.exit("missing facility " + k)
+              if not any(f["weekly"]): sys.exit(k + " has no weekly hours")
+          for k in ("SWRC", "SRFC"):
+              if not d["fac"][k]["adj"]: sys.exit(k + " lost its adjusted-hours block")
+          print("sane: SWRC %d / SRFC %d adjusted dates"
+                % (len(d["fac"]["SWRC"]["adj"]), len(d["fac"]["SRFC"]["adj"])))
+          PY
+
+      - name: Build
+        run: python3 build.py
+
+      - name: Commit any change
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- index.html; then
+            echo "hours unchanged"
+          else
+            git add index.html
+            git commit -m "hours: refresh from recsports.ufl.edu"
+            git push
+          fi
+
+      - name: Deploy to Netlify
+        run: npx --yes netlify-cli@24 deploy --dir=dist --prod -m "hours refresh"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: 9ff01542-e5a8-4940-969f-c636c8a329cc
