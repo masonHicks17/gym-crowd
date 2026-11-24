@@ -397,7 +397,7 @@ footer{padding:28px 0;font-family:"IBM Plex Mono",monospace;
 <section>
   <p class="eyebrow">By hour and day</p>
   <div class="hmscroll"><table class="hm" id="hm"></table></div>
-  <div class="readout" id="hmRead"><span class="dim">Hover any block for that hour's numbers, or tap to lock it and see its history.</span></div>
+  <div class="readout" id="hmRead"><span class="dim">Tap a block.</span></div>
   <div class="legend" id="legend"></div>
 </section>
 
@@ -405,7 +405,7 @@ footer{padding:28px 0;font-family:"IBM Plex Mono",monospace;
   <p class="eyebrow">Each court by hour · how often it's taken</p>
   <p class="chaxis" id="chAxis"></p>
   <div class="hmscroll"><table class="ch" id="ch"></table></div>
-  <div class="readout" id="chHourRead"><span class="dim">Hover or tap a block to see how often that court was in use at that hour.</span></div>
+  <div class="readout" id="chHourRead"><span class="dim">Tap a block.</span></div>
   <div class="legend" id="chLegend"></div>
 </section>
 
@@ -413,7 +413,7 @@ footer{padding:28px 0;font-family:"IBM Plex Mono",monospace;
   <p class="eyebrow"><span id="dayWhich">Today</span> against a typical <span id="dayKind">weekday</span></p>
   <div class="seg daypick" id="daySeg"></div>
   <div id="chart"></div>
-  <div class="readout" id="chRead"><span class="dim">Tap or hover the chart for that hour's numbers.</span></div>
+  <div class="readout" id="chRead"><span class="dim">Tap the chart.</span></div>
   <div class="note" id="chartNote" hidden></div>
 </section>
 
@@ -1512,7 +1512,7 @@ function renderHeat(data){
     if(locked) return;
     mark(null);
     document.getElementById("hmRead").innerHTML =
-      "<span class='dim'>Hover any block for that hour\u2019s numbers, or tap to lock it and see its history.</span>";
+      "<span class='dim'>Tap a block.</span>";
   });
   // tap locks a cell so the readout survives lifting your finger, and adds
   // its history as a second line inside the same box
@@ -1666,7 +1666,7 @@ function renderChart(data){
     " compared with a typical day'>"+g+"</svg>";
 
   const read = document.getElementById("chRead");
-  const hint = "<span class='dim'>Tap or hover the chart for that hour\u2019s numbers.</span>";
+  const hint = "<span class='dim'>Tap the chart.</span>";
   const dayWord = isToday ? "today" : DAYS[chartDay];
   const show = hr => {
     let s = "<b>"+hourLabel(hr)+"\u2013"+hourLabel((hr+1)%24)+"</b> \u00b7 ";
@@ -1762,9 +1762,8 @@ function renderCourts(){
   const grid = document.getElementById("courtGrid");
   if(!last){ grid.innerHTML = "<span class='dim'>No court readings yet.</span>"; return; }
   const open = last.courts.filter(n=>n===0).length;
-  document.getElementById("courtsWhen").textContent =
-    "· as of "+shortDate(last.t)+", "+hourLabel(last.t.getHours()).replace(/[ap]$/,"")+
-    ":"+String(last.t.getMinutes()).padStart(2,"0")+(last.t.getHours()<12?"a":"p");
+  // The age of this reading is already on the count above it.
+  document.getElementById("courtsWhen").textContent = "";
   document.getElementById("courtSum").innerHTML = last.closed
     ? "<span><b>Closed</b></span>"
     : "<span><b>"+open+"</b> of "+COURTS+" open</span>"+
@@ -1845,7 +1844,7 @@ function renderCourtHours(data){
     .filter(t=>t.free!==null).sort((a,b)=>b.free-a.free);
   const hint = withCourts.length>=3 && ranked.length
     ? "Most often free: <b>Court "+(ranked[0].k+1)+"</b> ("+Math.round(ranked[0].free*100)+
-      "% of "+withCourts.length+" readings). <span class='dim'>Tap a block for that hour.</span>"
+      "% of "+withCourts.length+" readings)."
     : "<span class='dim'>Only "+withCourts.length+" court reading"+(withCourts.length===1?"":"s")+
       " so far. Each poll adds one; patterns show up after a week or two.</span>";
   read.innerHTML = hint;
@@ -1965,8 +1964,7 @@ function camAgeStop(){ if(camAgeTimer){ clearInterval(camAgeTimer); camAgeTimer 
 
 function camRenderCaption(){
   const c = CAMS.find(x=>x.n===camPick);
-  document.getElementById("camCap").innerHTML =
-    c ? VENUE_LONG[c.venue]+" \u00b7 <b>"+c.label+"</b>" : "";
+  document.getElementById("camCap").innerHTML = "";
   camRenderAge();
   const note = document.getElementById("camNote");
   note.textContent = (CAMS.some(x=>x.loc===loc) || !c) ? "" :
@@ -2130,16 +2128,15 @@ async function load(){
       rows = fromCSV(await res.text()).filter(r=>!isTennis(r.name));
       if(rows.length){ ok = true;
         const latest = rows.reduce((m,r)=> r.t>m ? r.t : m, rows[0].t);
-        document.getElementById("stamp").textContent = "Last updated "+
-          latest.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+        stamp("");
       }
     }catch(e){
-      document.getElementById("stamp").textContent = "Live feed unreachable — showing snapshot";
+      stamp("Live feed unreachable — showing snapshot");
     }
   }
   if(!ok){
     rows = fromSnapshot(SNAPSHOT);
-    if(!CSV_URL) document.getElementById("stamp").textContent = "Snapshot through 30 Aug 2026 · add a CSV URL to go live";
+    if(!CSV_URL) stamp("Snapshot through 30 Aug 2026 · add a CSV URL to go live");
   }
   rows = rows.concat(await tennisP);
   buildControls();
@@ -2154,7 +2151,11 @@ async function load(){
 const SHEET_ID = "1eljH8rFfFfkLiBe2xU6VAUBWalAzWHAgC5wdla8Ah9A";
 const DRIVE = "Google Drive";
 const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-const stamp = t => { document.getElementById("stamp").textContent = t; };
+function stamp(t){
+  const el = document.getElementById("stamp");
+  el.textContent = t || "";
+  el.hidden = !t;        // nothing to report = no line at all
+}
 const fmtWhen = d => d.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
 
 function uniqueReadings(list){
@@ -2174,7 +2175,7 @@ function applyWorkbook(b64){
   if(!log.length) throw new Error("empty");
   rows = uniqueReadings(log.concat(ten.length ? ten : tennisFromSnapshot(TENNIS_SNAPSHOT)));
   const latest = log.reduce((m,r)=> r.t>m ? r.t : m, log[0].t);
-  stamp("Last updated "+fmtWhen(latest));
+  stamp("");
   buildControls(); draw();
 }
 function driveError(err){
