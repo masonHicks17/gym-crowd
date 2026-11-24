@@ -51,11 +51,10 @@ body{
 .wrap{max-width:860px;margin:0 auto}
 
 /* ---------- header ---------- */
-header{
-  padding:20px 0 16px;border-bottom:2px solid var(--iron);
-  display:flex;align-items:baseline;justify-content:space-between;
-  flex-wrap:wrap;gap:6px 20px;
-}
+header{padding:20px 0 14px;border-bottom:2px solid var(--iron)}
+/* Title and Share share the top line; the timestamp gets its own underneath,
+   so the header is two rows on a phone instead of three. */
+.headtop{display:flex;align-items:center;justify-content:space-between;gap:14px}
 h1{
   font-family:Anton,Impact,sans-serif;
   font-weight:400;
@@ -68,7 +67,7 @@ h1{
 .sub{
   font-family:"IBM Plex Mono",monospace;
   font-size:11px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--steel);
+  color:var(--steel);margin-top:9px;
 }
 
 /* ---------- controls ---------- */
@@ -112,7 +111,6 @@ section{padding:24px 0;border-bottom:1px solid var(--line)}
 .pctline b{color:var(--iron);font-weight:600}
 
 /* ---------- share + install ---------- */
-.headright{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .sharebtn{
   appearance:none;background:transparent;color:var(--iron);
   border:1.5px solid var(--iron);cursor:pointer;
@@ -330,9 +328,8 @@ footer{padding:28px 0;font-family:"IBM Plex Mono",monospace;
 
 <div class="wrap">
 <header>
-  <h1>UF Rec Crowd</h1>
-  <div class="headright">
-    <div class="sub" id="stamp">Loading&hellip;</div>
+  <div class="headtop">
+    <h1>UF Rec Crowd</h1>
     <button class="sharebtn" id="shareBtn" type="button">
       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path d="M8 1.5 L8 10.5 M4.5 5 L8 1.5 L11.5 5" fill="none"
@@ -343,6 +340,7 @@ footer{padding:28px 0;font-family:"IBM Plex Mono",monospace;
       </svg><span id="shareLabel">Share</span>
     </button>
   </div>
+  <div class="sub" id="stamp">Loading&hellip;</div>
 </header>
 
 <div class="controls">
@@ -2132,7 +2130,7 @@ async function load(){
       rows = fromCSV(await res.text()).filter(r=>!isTennis(r.name));
       if(rows.length){ ok = true;
         const latest = rows.reduce((m,r)=> r.t>m ? r.t : m, rows[0].t);
-        document.getElementById("stamp").textContent = "Live · sheet updated "+
+        document.getElementById("stamp").textContent = "Last updated "+
           latest.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
       }
     }catch(e){
@@ -2176,7 +2174,7 @@ function applyWorkbook(b64){
   if(!log.length) throw new Error("empty");
   rows = uniqueReadings(log.concat(ten.length ? ten : tennisFromSnapshot(TENNIS_SNAPSHOT)));
   const latest = log.reduce((m,r)=> r.t>m ? r.t : m, log[0].t);
-  stamp("Live · newest reading "+fmtWhen(latest));
+  stamp("Last updated "+fmtWhen(latest));
   buildControls(); draw();
 }
 function driveError(err){
