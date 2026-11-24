@@ -1259,6 +1259,9 @@ function beacon(ev){
   if(location.protocol === "file:") return;
   const h = location.hostname;
   if(!h || h === "localhost" || h === "127.0.0.1") return;
+  // The claude.ai copy of this page runs in a sandboxed frame with no
+  // /api/hit behind it, so the request would only ever be a wasted 404.
+  try{ if(window.top !== window.self) return; }catch(e){ return; }
   try{
     fetch("/api/hit", {
       method:"POST",
