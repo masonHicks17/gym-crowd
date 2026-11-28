@@ -1,10 +1,13 @@
 name: refresh hours
 
-# RecSports edits its hours page whenever a holiday or break comes up, and the
-# dashboard carries a baked-in copy of it (their page sends no CORS header, so
-# the browser cannot read it at runtime). This re-scrapes every morning and
-# commits the result; Netlify is connected to this repo, so the push is what
-# deploys it. No Netlify credentials live here.
+# RecSports edits its hours page whenever a holiday or break comes up, and
+# their page sends no CORS header, so the browser cannot read it directly.
+# This re-scrapes every morning and commits only hours.json, which the page
+# fetches from raw.githubusercontent.com when it opens. The commit message
+# carries [skip netlify], so this never triggers a Netlify deploy (each deploy
+# costs 15 credits; pushing daily used up the free plan). index.html keeps a
+# baked-in copy as a fallback, refreshed whenever the site is deployed by hand.
+# No Netlify credentials live here.
 #
 # If the scrape comes back wrong the job fails, nothing is pushed, and the last
 # good deploy stays up. GitHub emails you when a scheduled job fails.
@@ -35,18 +38,20 @@ jobs:
       - name: Refuse a bad scrape
         run: python3 check-hours.py
 
-      - name: Build
-        run: python3 build.py
+      - name: Write hours.json
+        run: |
+          python3 export-hours.py
+          git checkout -- index.html    # the site itself stays untouched
 
-      - name: Commit and push if the hours moved
+      - name: Commit hours.json (no Netlify deploy)
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- index.html dist/; then
-            echo "hours unchanged - nothing to deploy"
+          if git diff --quiet -- hours.json; then
+            echo "hours.json unchanged"
           else
-            git add index.html dist/
-            git commit -m "hours: refresh from recsports.ufl.edu"
+            git add hours.json
+            git commit -m "hours: refresh from recsports.ufl.edu [skip netlify]"
             git push
-            echo "pushed - Netlify will deploy"
+            echo "pushed hours.json - Netlify skips this commit"
           fi

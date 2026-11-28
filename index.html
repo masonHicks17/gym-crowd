@@ -1292,6 +1292,21 @@ function track(name){
 const HOURS = {"scraped": "2026-11-28","year": 2026,"src": "https://recsports.ufl.edu/about/hours/","fac": {"SWRC": {"weekly": [[[480,1260]],[[330,1440]],[[330,1440]],[[330,1440]],[[330,1440]],[[330,1440]],[[480,1260]]],"adj": {"2026-11-11": [[480,1320]],"2026-11-23": [[480,1200]],"2026-11-24": [[480,1200]],"2026-11-25": [[480,660]],"2026-11-26": null,"2026-11-27": null,"2026-11-28": null,"2026-12-11": [[330,1320]],"2026-12-12": [[600,780]],"2026-12-13": [[600,780]],"2026-12-14": [[600,1200]],"2026-12-15": [[600,1200]],"2026-12-16": [[600,1200]],"2026-12-17": [[600,1200]],"2026-12-18": [[600,960]],"2026-12-19": [[600,780]],"2026-12-20": [[600,780]],"2026-12-21": [[600,780]],"2026-12-22": null,"2026-12-23": null,"2026-12-24": null,"2026-12-25": null,"2026-12-26": null,"2026-12-27": null,"2026-12-28": null,"2026-12-29": null,"2026-12-30": null,"2026-12-31": null},"name": "Southwest Recreation Center"},"SRFC": {"weekly": [[[720,1260]],[[360,1380]],[[360,1380]],[[360,1380]],[[360,1380]],[[360,1380]],[[720,1260]]],"adj": {"2026-11-07": null,"2026-11-11": [[600,1320]],"2026-11-21": null,"2026-11-22": null,"2026-11-23": null,"2026-11-24": null,"2026-11-25": null,"2026-11-26": null,"2026-11-27": null,"2026-11-28": null,"2026-11-29": null,"2026-12-07": [[480,1200]],"2026-12-08": [[480,1200]],"2026-12-09": [[480,1200]],"2026-12-10": [[480,960]],"2026-12-11": null,"2026-12-12": null,"2026-12-13": null,"2026-12-14": null,"2026-12-15": null,"2026-12-16": null,"2026-12-17": null,"2026-12-18": null,"2026-12-19": null,"2026-12-20": null,"2026-12-21": null,"2026-12-22": null,"2026-12-23": null,"2026-12-24": null,"2026-12-25": null,"2026-12-26": null,"2026-12-27": null,"2026-12-28": null,"2026-12-29": null,"2026-12-30": null,"2026-12-31": null},"name": "Student Recreation & Fitness Center"},"UVS": {"weekly": [[[600,1260]],[[900,1350]],[[900,1350]],[[900,1350]],[[900,1350]],[[900,1350]],[[600,1260]]],"adj": {},"name": "UVS Sand Volleyball & Field Complex"},"TENNIS": {"weekly": [[[330,1440]],[[330,1440]],[[330,1440]],[[330,1440]],[[330,1440]],[[330,1440]],[[330,1440]]],"adj": {},"name": "Southwest Recreation Center Tennis Courts"}}};
 /* HOURS-DATA-END */
 
+/* Fresh hours without a Netlify deploy: the daily GitHub Action commits
+   hours.json (with [skip netlify]) and raw.githubusercontent.com allows
+   cross-origin reads, so the page picks up new hours on open. If the fetch
+   fails (offline, or the artifact's CSP), the baked copy above stays. */
+const HOURS_JSON_URL = "https://raw.githubusercontent.com/masonHicks17/gym-crowd/main/hours.json";
+fetch(HOURS_JSON_URL, {cache: "no-cache"})
+  .then(r => r.ok ? r.json() : null)
+  .then(d => {
+    if(!d || !d.scraped || !d.fac || !d.fac.SWRC || !d.fac.SRFC) return;
+    if(d.scraped < HOURS.scraped) return;          // never go backwards
+    Object.assign(HOURS, d);
+    if(rows.length) draw();
+  })
+  .catch(() => {});
+
 const HOURS_KEY = {
   "SWRC Weight Room":    "SWRC",
   "SRFC Weight Room":    "SRFC",

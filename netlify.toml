@@ -5,9 +5,16 @@
 # image and means a broken scrape can never take the site down - the Action
 # fails, nothing is pushed, and the last good deploy stays up.
 
+#
+# Each production deploy costs 15 credits, so only build when something the
+# site actually serves changed. The daily hours commit touches hours.json only
+# (and carries [skip netlify] anyway), so it never deploys. `ignore` exits 0
+# to skip the build.
+
 [build]
   publish = "dist"
   functions = "netlify/functions"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- dist netlify netlify.toml package.json package-lock.json"
 
 # Visit counting, served from this domain. Same-origin, so ad blockers do not
 # suppress it the way they do a third-party analytics script.
